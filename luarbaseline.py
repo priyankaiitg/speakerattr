@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup as bsoup
 import sys
 from torch.nn.functional import cosine_similarity as cosim
 
-chatlog = ["/home/priyanka/research/2025/speakerattr/ohaichatlogs/chatlog-117-ohai-202307281200-00.json"]
+chatlog = ["chatlog-117-ohai-202307281200-00.json"]
 
 data = []
 
