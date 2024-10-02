@@ -5,12 +5,14 @@ from bs4 import BeautifulSoup as bsoup
 import sys
 from torch.nn.functional import cosine_similarity as cosim
 
-chatlog = ["chatlog-117-ohai-202307281200-00.json"]
+dpath = "/home/priyanka/research/2025/speakerattr/v6opschatlogs/"
+
+chatlog = ["chatlog-113-v6ops-202203211000-00.json", "chatlog-116-v6ops-202303270930-00.json", "chatlog-119-v6ops-202403200930-00.json", "chatlog-114-v6ops-202207261000-00.json", "chatlog-117-v6ops-202307250930-01.json", "chatlog-120-v6ops-202407250930-00.json", "chatlog-115-v6ops-202211110930-00.json", "chatlog-118-v6ops-202311071300-00.json"]
 
 data = []
 
 for file in chatlog:
-    with open(file, "r") as f:
+    with open((dpath + file), "r") as f:
         data.extend(json.load(f))
 
 tokenizer = AutoTokenizer.from_pretrained("rrivera1849/LUAR-MUD")
@@ -22,6 +24,7 @@ authorspeech = {}
 min_len = 10000
 min_batch = 1000
 episode_threshold = 5
+batch_threshold = 3
 
 for utter in data:
     author = utter['author']
@@ -34,19 +37,24 @@ for utter in data:
 delauthor = []
 
 for author in authorspeech:
+    delepisode = []
     for idx, episode in enumerate(authorspeech[author]):
         if len(episode) <= episode_threshold:
-            authorspeech[author].pop(idx)
-    if len(authorspeech[author]) <= 1:
+            delepisode.append(episode)
+    authorspeech[author] = list(filter(lambda x: x not in delepisode, authorspeech[author]))
+    if len(authorspeech[author]) <= batch_threshold:
         delauthor.append(author)
 
-for author in delauthor:
-    authorspeech.pop(author)
+authors = {}
 
 for author in authorspeech:
-    if len(authorspeech[author]) < min_batch:
-        min_batch = len(authorspeech[author])
-    for episode in authorspeech[author]:
+    if author not in delauthor:
+        authors[author] = authorspeech[author]
+
+for author in authors:
+    if len(authors[author]) < min_batch:
+        min_batch = len(authors[author])
+    for episode in authors[author]:
         if len(episode) < min_len:
             min_len = len(episode)
 
@@ -61,12 +69,12 @@ if episode_length <= 0 or batch_size <= 1:
 
 authoremb = {}
 
-for author in authorspeech:
+for author in authors:
     text = []
-    split = len(authorspeech[author])/(batch_size-1)
+    split = len(authors[author])/(batch_size-1)
     for i in range(0, batch_size):
         idx = (int)((i*split) - 1)
-        text.extend(authorspeech[author][idx][0:episode_length])
+        text.extend(authors[author][idx][0:episode_length])
 
 # we embed `episodes`, a colletion of documents presumed to come from an author
 # NOTE: make sure that `episode_length` consistent across `episode`
@@ -104,5 +112,8 @@ for author1 in authoremb:
             authorsim[author1] = {}
         authorsim[author1][author2] = dist
 
-print(authorsim)
+for author in authorsim:
+    print(author + " : ")
+    print(authorsim[author])
+    print("\n\n")
 
